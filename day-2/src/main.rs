@@ -9,8 +9,15 @@ fn convert_line_into_range(line: &str) -> RangeInclusive<u64> {
 }
 
 fn is_invalid_id(s: &str) -> bool {
-    let (a, b) = s.split_at(s.len() / 2);
-    a == b
+    (1..=s.len() / 2).any(|size| {
+        let char_arr: Vec<char> = s.chars().collect();
+        let char_chunks: Vec<_> = char_arr.chunks(size).collect();
+        let str_chunks: Vec<String> = char_chunks
+            .iter()
+            .map(|chunk| chunk.iter().collect())
+            .collect();
+        str_chunks.iter().all(|chunk| *chunk == str_chunks[0])
+    })
 }
 
 fn find_invalid_ids_in_range(range: RangeInclusive<u64>) -> Vec<u64> {
@@ -74,6 +81,6 @@ mod tests {
             "11-22,95-115,998-1012,1188511880-1188511890,222220-222224,1698522-1698528,446443-446449,38593856-38593862,565653-565659,824824821-824824827,2121212118-2121212124",
         );
         let total = super::sum_total_invalid_ids_in_input(input);
-        assert_eq!(total, 1227775554);
+        assert_eq!(total, 4174379265);
     }
 }
