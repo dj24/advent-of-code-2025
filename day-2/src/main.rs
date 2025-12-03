@@ -1,51 +1,38 @@
 use std::fs;
+use std::ops::RangeInclusive;
 
-fn split_line_into_numbers(line: &str) -> [&str; 2] {
-    let vec: Vec<_> = line.split("-")
-        .map(|num_str| num_str.trim())
-        .collect();
-    assert!(vec.len() == 2);
-    [vec[0], vec[1]]
+fn convert_line_into_range(line: &str) -> RangeInclusive<usize> {
+    let numbers: Vec<_> = line.split("-").collect();
+    let start: usize = numbers[0].parse().expect("Failed to parse start number");
+    let end: usize = numbers[1].parse().expect("Failed to parse end number");
+    start..=end
 }
 
-fn concat_id_pair(all_ids: Vec<&str>, id_pair: [&str; 2]) -> Vec<String> {
-    let mut result = Vec::new();
-    for id in all_ids {
-        result.push(String::from(id));
+// Returns all divisors of x greater than 1, used to determine all possible group sizes for checking repeated patterns
+fn get_valid_divisors(x: u32) -> Vec<u32> {
+    let mut divisors = Vec::new();
+    for i in 2..=x {
+        if x % i == 0 {
+            divisors.push(i);
+        }
     }
-    result.push(String::from(id_pair[0]));
-    result.push(String::from(id_pair[1]));
-    result
+    divisors
 }
 
-struct IdSegments {
-    extracted: String,
-    remaining_concatenated: String,
+fn chunk_string(s: &str, chunk_size: usize) -> Vec<&str> {
+    s.as_bytes()
+        .chunks(chunk_size)
+        .map(|chunk| std::str::from_utf8(chunk).expect("Invalid UTF-8"))
+        .collect()
 }
 
-fn splice_segment_from_id(id: String, size: usize, pos: usize) -> IdSegments {
-    let extracted_slice_end = pos + size;
-    assert!(id.len() >= extracted_slice_end);
-    let extracted_slice = &id[pos..extracted_slice_end];
-    let remaining_concatenated = format!(
-        "{}{}",
-        &id[..pos],
-        &id[extracted_slice_end..]
-    );
-    
-    IdSegments {
-        extracted: String::from(extracted_slice),
-        remaining_concatenated,
+// Slices the string into chunks of pattern_size and checks if all chunks are identical
+fn check_for_repeated_pattern_of_size(s: &str, pattern_size: usize) -> bool {
+    let chunks = chunk_string(s, pattern_size);
+    if chunks.len() < 2 {
+        return false;
     }
-}
-
-fn id_contains_segment(id: String, segment: String) -> bool {
-    id.contains(&segment)
-}
-
-fn find_repeating_range_in_string(s: String) -> Option<(usize, usize)> {
-    // TODO:
-    None
+    chunks[1..].iter().any(|chunk| *chunk == chunks[0])
 }
 
 fn main() {
@@ -63,32 +50,41 @@ fn main() {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn splits_line_works() {
-        let line = "10 - 20";
-        let numbers = super::split_line_into_numbers(line);
-        assert_eq!(numbers, ["10", "20"]);
+    fn convert_line_works() {
+        let line = "10-20";
+        let range = super::convert_line_into_range(line);
+        assert_eq!(range, 10..=20);
     }
 
     #[test]
-    fn concat_id_pair_works() {
-        let all_ids = vec!["1", "2", "3"];
-        let id_pair = ["4", "5"];
-        let result = super::concat_id_pair(all_ids, id_pair);
-        assert_eq!(result, vec!["1", "2", "3", "4", "5"]);
+    fn get_valid_divisors_works() {
+        let divisors = super::get_valid_divisors(12);
+        assert_eq!(divisors, vec![2, 3, 4, 6, 12]);
     }
-    
+
     #[test]
-    fn splice_id_works() {
-        let id = String::from("123456");
-        let spliced = super::splice_segment_from_id(id, 2, 2);
-        assert_eq!(spliced.extracted, "34");
-        assert_eq!(spliced.remaining_concatenated, "1256");
+    fn chunk_string_works() {
+        let s = "123456";
+        let chunks = super::chunk_string(s, 2);
+        assert_eq!(chunks, vec!["12", "34", "56"]);
     }
-    
+
     #[test]
-    fn id_contains_segment_works() {
-        let id = "abcdefg".to_string();
-        let segment = "cde".to_string();
-        assert!(super::id_contains_segment(id, segment));
+    fn chunk_string_not_even() {
+        let s = "12345";
+        let chunks = super::chunk_string(s, 2);
+        assert_eq!(chunks, vec!["12", "34", "5"]);
+    }
+
+    #[test]
+    fn check_for_repeated_pattern_of_size_works() {
+        let s = "ababab";
+        assert!(super::check_for_repeated_pattern_of_size(s, 2));
+    }
+
+    #[test]
+    fn check_for_repeated_pattern_of_size_fails() {
+        let s = "abcabc";
+        assert!(!super::check_for_repeated_pattern_of_size(s, 2));
     }
 }
