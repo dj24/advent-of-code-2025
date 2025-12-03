@@ -69,7 +69,6 @@ mod tests {
         let range = 11..=22;
         let invalid_ids = super::find_invalid_ids_in_range(range);
         assert_eq!(invalid_ids, vec![11, 22]);
-
         let range = 1188511880..=1188511890;
         let invalid_ids = super::find_invalid_ids_in_range(range);
         assert_eq!(invalid_ids, vec![1188511885]);
