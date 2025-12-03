@@ -1,47 +1,39 @@
 use std::fs;
 use std::ops::RangeInclusive;
 
-fn convert_line_into_range(line: &str) -> RangeInclusive<usize> {
+fn convert_line_into_range(line: &str) -> RangeInclusive<u64> {
     let numbers: Vec<_> = line.split("-").collect();
-    let start: usize = numbers[0].parse().expect("Failed to parse start number");
-    let end: usize = numbers[1].parse().expect("Failed to parse end number");
+    let start: u64 = numbers[0].parse().expect("Failed to parse start number");
+    let end: u64 = numbers[1].parse().expect("Failed to parse end number");
     start..=end
 }
 
-// Returns all divisors of x greater than 1, used to determine all possible group sizes for checking repeated patterns
-fn get_valid_divisors(x: u32) -> Vec<u32> {
-    let mut divisors = Vec::new();
-    for i in 2..=x {
-        if x % i == 0 {
-            divisors.push(i);
+fn is_invalid_id(s: &str) -> bool {
+    let (a, b) = s.split_at(s.len() / 2);
+    a == b
+}
+
+fn find_invalid_ids_in_range(range: RangeInclusive<u64>) -> Vec<u64> {
+    range.fold(vec![], |acc, id| {
+        if is_invalid_id(&*id.to_string()) {
+            [acc, vec![id]].concat()
+        } else {
+            acc
         }
-    }
-    divisors
+    })
 }
 
-fn chunk_string(s: &str, chunk_size: usize) -> Vec<&str> {
-    s.as_bytes()
-        .chunks(chunk_size)
-        .map(|chunk| std::str::from_utf8(chunk).expect("Invalid UTF-8"))
-        .collect()
-}
-
-// Slices the string into chunks of pattern_size and checks if all chunks are identical
-fn check_for_repeated_pattern_of_size(s: &str, pattern_size: usize) -> bool {
-    let chunks = chunk_string(s, pattern_size);
-    if chunks.len() < 2 {
-        return false;
-    }
-    chunks[1..].iter().any(|chunk| *chunk == chunks[0])
+fn sum_total_invalid_ids_in_input(input: String) -> u64 {
+    input.split(",").fold(0, |acc, line| {
+        let invalid_ids = find_invalid_ids_in_range(convert_line_into_range(line));
+        acc + invalid_ids.iter().sum::<u64>()
+    })
 }
 
 fn main() {
     match fs::read_to_string("./day-2/assets/input.txt") {
         Ok(contents) => {
-            let output = contents.split(",").for_each(|line| {
-                println!("{:?}", line);
-            });
-
+            println!("{}", sum_total_invalid_ids_in_input(contents));
         }
         Err(e) => eprintln!("Error reading file: {}", e),
     }
@@ -55,36 +47,33 @@ mod tests {
         let range = super::convert_line_into_range(line);
         assert_eq!(range, 10..=20);
     }
-
     #[test]
-    fn get_valid_divisors_works() {
-        let divisors = super::get_valid_divisors(12);
-        assert_eq!(divisors, vec![2, 3, 4, 6, 12]);
+    fn is_invalid_id_works() {
+        assert!(super::is_invalid_id("abcabc"));
     }
 
     #[test]
-    fn chunk_string_works() {
-        let s = "123456";
-        let chunks = super::chunk_string(s, 2);
-        assert_eq!(chunks, vec!["12", "34", "56"]);
+    fn is_invalid_id_fails() {
+        assert!(!super::is_invalid_id("abcab"));
     }
 
     #[test]
-    fn chunk_string_not_even() {
-        let s = "12345";
-        let chunks = super::chunk_string(s, 2);
-        assert_eq!(chunks, vec!["12", "34", "5"]);
+    fn count_invalid_ids_in_range_works() {
+        let range = 11..=22;
+        let invalid_ids = super::find_invalid_ids_in_range(range);
+        assert_eq!(invalid_ids, vec![11, 22]);
+
+        let range = 1188511880..=1188511890;
+        let invalid_ids = super::find_invalid_ids_in_range(range);
+        assert_eq!(invalid_ids, vec![1188511885]);
     }
 
     #[test]
-    fn check_for_repeated_pattern_of_size_works() {
-        let s = "ababab";
-        assert!(super::check_for_repeated_pattern_of_size(s, 2));
-    }
-
-    #[test]
-    fn check_for_repeated_pattern_of_size_fails() {
-        let s = "abcabc";
-        assert!(!super::check_for_repeated_pattern_of_size(s, 2));
+    fn sum_total_invalid_ids_in_input_works() {
+        let input = String::from(
+            "11-22,95-115,998-1012,1188511880-1188511890,222220-222224,1698522-1698528,446443-446449,38593856-38593862,565653-565659,824824821-824824827,2121212118-2121212124",
+        );
+        let total = super::sum_total_invalid_ids_in_input(input);
+        assert_eq!(total, 1227775554);
     }
 }
