@@ -41,6 +41,14 @@ fn count_at_char_in_adjacent_positions(
     count
 }
 
+fn remove_roll_at_position(
+    grid: &mut Vec<Vec<char>>,
+    row: usize,
+    col: usize,
+) {
+    grid[row][col] = '.';
+}
+
 fn count_valid_rolls_in_grid(grid: &Vec<Vec<char>>) -> u32 {
     let mut valid_positions = 0;
     for row in 0..grid.len() {
@@ -57,12 +65,48 @@ fn count_valid_rolls_in_grid(grid: &Vec<Vec<char>>) -> u32 {
     valid_positions
 }
 
+// Returns a new grid with valid rolls removed and the count of removals
+fn remove_valid_rolls_in_grid(grid: &Vec<Vec<char>>) -> (Vec<Vec<char>>, usize) {
+    let mut new_grid = grid.clone();
+    let mut removals = 0;
+    for row in 0..grid.len() {
+        for col in 0..grid[0].len() {
+            if grid[row][col] != '@' {
+                continue;
+            }
+            let adjacent_at_count = count_at_char_in_adjacent_positions(&grid, row, col);
+            if adjacent_at_count < 4 {
+                remove_roll_at_position(&mut new_grid, row, col);
+                removals += 1;
+            }
+        }
+    }
+    (new_grid, removals)
+}
+
+// Removes valid rolls repeatedly until no more can be removed
+fn remove_until_no_more_valid_rolls(
+    grid: &Vec<Vec<char>>,
+) -> usize {
+    let mut current_grid = grid.clone();
+    let mut total_removals = 0;
+    loop {
+        let (new_grid, removals) = remove_valid_rolls_in_grid(&current_grid);
+        if removals == 0 {
+            break;
+        }
+        current_grid = new_grid;
+        total_removals += removals;
+    }
+    total_removals
+}
+
 fn main() {
     match fs::read_to_string("./day-4/assets/input.txt") {
         Ok(contents) => {
             let grid = load_lines_into_grid(contents);
-            let valid_positions = count_valid_rolls_in_grid(&grid);
-            println!("{}", valid_positions);
+            let total_removed = remove_until_no_more_valid_rolls(&grid);
+            println!("total_removed: {}", total_removed);
         }
         Err(e) => eprintln!("Error reading file: {}", e),
     }
@@ -104,7 +148,7 @@ mod tests {
     }
 
     #[test]
-    fn count_valid_rolses_in_grid_works() {
+    fn count_valid_rolls_in_grid_works() {
         let str = "..@@.@@@@.
 @@@.@.@.@@
 @@@@@.@.@@
@@ -118,5 +162,65 @@ mod tests {
         let grid = super::load_lines_into_grid(str.to_string());
         let count = super::count_valid_rolls_in_grid(&grid);
         assert_eq!(count, 13);
+    }
+
+    #[test]
+    fn remove_roll_at_position_works() {
+        let mut grid = vec![
+            vec!['@', 'a', '@'],
+            vec!['b', '@', 'c'],
+            vec!['@', 'd', '@'],
+        ];
+        super::remove_roll_at_position(&mut grid, 1, 1);
+        assert_eq!(grid, vec![
+            vec!['@', 'a', '@'],
+            vec!['b', '.', 'c'],
+            vec!['@', 'd', '@'],
+        ]);
+    }
+
+    #[test]
+    fn remove_valid_rolls_in_grid_works() {
+        let str = "..@@.@@@@.
+@@@.@.@.@@
+@@@@@.@.@@
+@.@@@@..@.
+@@.@@@@.@@
+.@@@@@@@.@
+.@.@.@.@@@
+@.@@@.@@@@
+.@@@@@@@@.
+@.@.@@@.@.";
+        let output_str = ".......@..
+.@@.@.@.@@
+@@@@@...@@
+@.@@@@..@.
+.@.@@@@.@.
+.@@@@@@@.@
+.@.@.@.@@@
+..@@@.@@@@
+.@@@@@@@@.
+....@@@...";
+        let grid = super::load_lines_into_grid(str.to_string());
+        let new_grid = super::remove_valid_rolls_in_grid(&grid);
+        let expected_grid = super::load_lines_into_grid(output_str.to_string());
+        assert_eq!(new_grid, (expected_grid, 13));
+    }
+
+    #[test]
+    fn remove_until_no_more_valid_rolls_works() {
+        let str = "..@@.@@@@.
+@@@.@.@.@@
+@@@@@.@.@@
+@.@@@@..@.
+@@.@@@@.@@
+.@@@@@@@.@
+.@.@.@.@@@
+@.@@@.@@@@
+.@@@@@@@@.
+@.@.@@@.@.";
+        let grid = super::load_lines_into_grid(str.to_string());
+        let total_removed = super::remove_until_no_more_valid_rolls(&grid);
+        assert_eq!(total_removed, 43);
     }
 }
