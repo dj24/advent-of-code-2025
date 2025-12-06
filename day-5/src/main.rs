@@ -31,6 +31,24 @@ fn count_fresh_ids(ranges: Vec<RangeInclusive<u64>>, ids: Vec<u64>) -> u64 {
         .count() as u64
 }
 
+// Given an index in the ranges, update all other ranges to trim their start and end if they overlap with the range at the given index
+fn trim_start_end_of_ranges(ranges: &Vec<RangeInclusive<u64>>) -> Vec<RangeInclusive<u64>> {
+    let mut output_ranges = ranges.clone();
+    for (i,range) in ranges.iter().enumerate() {
+        let (start, end) = {
+            (*range.start(), *range.end())
+        };
+        for (j, range) in output_ranges.iter_mut().enumerate() {
+            // Skip self
+            if i == j {
+                continue;
+            }
+            *range = (end + 1).max(*range.end())..=(start - 1).min(*range.start());
+        } 
+    }
+    output_ranges
+}
+
 fn main() {
     match fs::read_to_string("./day-5/assets/input.txt") {
         Ok(contents) => {
@@ -43,6 +61,7 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+
     #[test]
     fn convert_line_works() {
         let line = "10-20";
@@ -67,7 +86,7 @@ mod tests {
         assert_eq!(ranges, vec![3..=5, 10..=14, 16..=20, 12..=18]);
         assert_eq!(ids, vec![1, 5, 8, 11, 17, 32]);
     }
-    
+
     #[test]
     fn is_id_fresh_works() {
         let ranges = vec![3..=5, 10..=14, 16..=20, 12..=18];
@@ -78,12 +97,20 @@ mod tests {
         assert_eq!(super::is_id_fresh(ranges.clone(), 17), true);
         assert_eq!(super::is_id_fresh(ranges.clone(), 32), false);
     }
-    
+
     #[test]
     fn count_fresh_ids_works() {
         let ranges = vec![3..=5, 10..=14, 16..=20, 12..=18];
         let ids = vec![1, 5, 8, 11, 17, 32];
         let count = super::count_fresh_ids(ranges, ids);
         assert_eq!(count, 3);
+    }
+
+
+    #[test]
+    fn trim_start_end_of_ranges_works() {
+        let mut ranges = vec![3..=10, 8..=15, 12..=20];
+        super::trim_start_end_of_ranges(&mut ranges);
+        assert_eq!(ranges, vec![3..=10, 11..=15, 16..=20]);
     }
 }
