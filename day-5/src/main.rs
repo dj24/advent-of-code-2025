@@ -34,17 +34,33 @@ fn count_fresh_ids(ranges: Vec<RangeInclusive<u64>>, ids: Vec<u64>) -> u64 {
 // Given an index in the ranges, update all other ranges to trim their start and end if they overlap with the range at the given index
 fn trim_start_end_of_ranges(ranges: &Vec<RangeInclusive<u64>>) -> Vec<RangeInclusive<u64>> {
     let mut output_ranges = ranges.clone();
-    for (i,range) in ranges.iter().enumerate() {
+    for (i,range_check) in ranges.iter().enumerate() {
         let (start, end) = {
-            (*range.start(), *range.end())
+            (*range_check.start(), *range_check.end())
         };
-        for (j, range) in output_ranges.iter_mut().enumerate() {
-            // Skip self
+
+        let mut min_start = u64::MAX;
+        let mut max_end = u64::MIN;
+
+        for (j,range) in output_ranges.iter_mut().enumerate() {
             if i == j {
                 continue;
             }
-            *range = (end + 1).max(*range.end())..=(start - 1).min(*range.start());
-        } 
+            // Trim start
+           if range.start() < &min_start {
+                min_start = *range.start();
+           }
+          if range.end() > &max_end {
+             max_end = *range.end();
+          }
+        }
+
+        let trimmed_start = if start <= min_start { min_start + 1 } else { start };
+        let trimmed_end = if end >= max_end { max_end - 1 } else { end };
+
+        output_ranges[i] = trimmed_start..=trimmed_end;
+
+        println!("Trimming {} -> {} with range: {} -> {} = {} -> {}", start, end, min_start, max_end, trimmed_start, trimmed_end);
     }
     output_ranges
 }

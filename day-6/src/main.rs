@@ -107,14 +107,54 @@ fn get_column_total_part_2(column: Vec<String>) -> u64 {
 }
 
 fn part_2(contents: &String) -> u64 {
-    let column_arrays: Vec<Vec<String>> = contents
-        .lines()
-        .map(slice_row)
-        .collect();
+    let rows: Vec<&str> = contents.lines().collect();
 
-    rotate_2d_array(column_arrays).iter().fold(0, |outer_acc, row| {
-        get_column_total_part_2(row.clone()) + outer_acc
-    })
+    let column_count = rows[0].len();
+    let row_count = rows.len() - 1;
+
+    let mut current_column_index = 0;
+    let mut last_empty_column_index: i32 = -1;
+    let mut total: u64 = 0;
+
+    // Iterate each row in lockstep - when we find an empty column, we stop and go back to collect digits
+    while current_column_index <= column_count {
+        let is_empty_column = current_column_index == column_count || (0..row_count).all(|row_index| {
+            let line = rows[row_index];
+            let slice = line.chars().nth(current_column_index).unwrap();
+            slice.is_whitespace()
+        });
+
+        if is_empty_column {
+            let numbers = ((last_empty_column_index + 1) as usize..current_column_index).map(|i| {
+                let column: String = rows.iter().map(|line| {
+                    line.chars().nth(i).unwrap()
+                }).filter(|c| !['*', '+', ' '].contains(c)).collect();
+                column.parse::<u64>().unwrap()
+            });
+
+            let operator = rows[row_count].chars().nth((last_empty_column_index + 1) as usize).unwrap();
+
+            let result = match operator {
+                '*' => {
+                    println!("Multiplying numbers: {:?}", numbers.clone().collect::<Vec<u64>>());
+                    numbers.fold(1, |acc, element| acc * element)
+                }
+                '+' => {
+                    println!("Adding numbers: {:?}", numbers.clone().collect::<Vec<u64>>());
+                    numbers.sum()
+                }
+                _ => {
+                    panic!("Unexpected operator: {}", operator);
+                }
+            };
+            total += result;
+
+            last_empty_column_index = current_column_index as i32;
+        }
+
+        current_column_index += 1;
+    }
+    total
 }
 
 // Gets each columns value, including whitespace, but with the trailing whitespace removed
@@ -231,8 +271,6 @@ mod tests {
         let total_multiply = get_column_total_part_2(column_multiply);
         assert_eq!(total_multiply, 3253600);
     }
-
-
 
 
     #[test]
