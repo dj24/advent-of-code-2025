@@ -41,7 +41,7 @@ fn process_line(previous_line: &str, current_line: &str) -> (u64, String) {
             ((_, Some('|'), _), (_, Some('^'), _)) => {
                 split_indices.insert(i);
                 '^'
-            }, 
+            },
             // Dont change splitters
             ((_, _, _), (_, Some('^'), _)) => {
                 '^'
@@ -53,7 +53,7 @@ fn process_line(previous_line: &str, current_line: &str) -> (u64, String) {
     (split_indices.len() as u64, result_line)
 }
 
-fn part_1(input: &str) -> u64 {
+fn part_1(input: &str) -> (u64, Vec<String>) {
     let result = input.lines().enumerate().fold((0, vec![]),|acc, (i, line)| {
         if i == 0 {
             return (0,vec![line.to_string()]);
@@ -66,13 +66,25 @@ fn part_1(input: &str) -> u64 {
         println!("Output   {} -> {}", line_output, split_count);
         (acc.0 + split_count, [acc.1, vec![line_output]].concat())
     });
-    result.0
+    result
 }
+
+// TODO: add up previous rows
+fn process_line_part_2(previous_line: &str, previous_line_with_splits: &str, current_line: &str) -> String {
+    current_line.chars().enumerate().fold(String::with_capacity(current_line.len()), |mut acc, (i, curr_char)| {
+       let previous_left_char = if i > 0 { Some(previous_line.chars().nth(i-1).unwrap()) } else { None };
+        let previous_right_char = if i <= previous_line.len() { Some(previous_line.chars().nth(i+1).unwrap()) } else { None };
+        let previous_char_with_splits = Some(previous_line_with_splits.chars().nth(i).unwrap());
+
+    })
+
+}
+
 
 fn main() {
     match fs::read_to_string("./day-7/assets/input.txt") {
         Ok(contents) => {
-            println!("Split count {}", part_1(&*contents))
+            println!("Split count {}", part_1(&*contents).0)
         },
         Err(e) => eprintln!("Error reading file: {}", e),
     }
@@ -122,9 +134,37 @@ mod tests {
 ...............
 .^.^.^.^.^...^.
 ...............";
+        let expected = ".......S.......
+.......|.......
+......|^|......
+......|.|......
+.....|^|^|.....
+.....|.|.|.....
+....|^|^|^|....
+....|.|.|.|....
+...|^|^|||^|...
+...|.|.|||.|...
+..|^|^|||^|^|..
+..|.|.|||.|.|..
+.|^|||^||.||^|.
+.|.|||.||.||.|.
+|^|^|^|^|^|||^|
+|.|.|.|.|.|||.|";
         assert_eq!(
             part_1(input),
-            21
+            (21, expected.lines().map(|s| s.to_string()).collect())
+        );
+    }
+
+    #[test]
+    fn process_line_part_2_works() {
+        let previous_line = "1.1.1.1.1.111.1";
+        let previous_line_with_splits = "|^|^|^|^|^|||^|";
+        let current_line =  ".|.|||.||.||.|.";
+        let expected =      ".2.212.21.11.2.";
+        assert_eq!(
+            process_line_part_2(previous_line, previous_line_with_splits, current_line),
+            expected.to_string()
         );
     }
 }
